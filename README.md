@@ -1,3 +1,5 @@
+#项目游玩地址
+http://bigbing,v50tome.cn
 # 🍳 煎饼摊诗词接龙游戏
 
 一个基于Web的诗词接龙游戏，玩家可以在100×100的网格中通过相同汉字连接不同诗句，形成如同煎饼摊般错落有致的诗词网络。
@@ -8,6 +10,7 @@
 - **可视化网格**: 100×100的大画布，支持缩放和滚动
 - **颜色系统**: 多种预设颜色，让每句诗都有独特的视觉标识
 - **实时保存**: 自动保存游戏进度，支持数据持久化
+- **实时玩家列表**: 左侧面板显示玩家在线/离线状态与各自已填诗句数量，并在加句、进出房间、断线时实时更新
 - **响应式设计**: 支持桌面和移动设备，提供良好的用户体验
 
 ## 🎮 游戏规则
@@ -65,16 +68,17 @@
 
 ## 🛠️ 技术架构
 
-- **后端**: Python Flask
+- **后端**: Python Flask + Flask-SocketIO（threading 模式）
 - **前端**: HTML5 + CSS3 + JavaScript (ES6+)
-- **数据存储**: JSON文件存储
+- **数据存储**: JSON文件存储（`rooms_data.json` 按房间分片）
+- **实时通信**: Socket.IO（房间内事件广播与统计推送）
 - **部署**: 支持宝塔面板部署
 
 ## 📁 项目结构
 
 ```
 jianbing-game/
-├── app.py              # Flask主应用
+├── app.py              # Flask主应用（REST + Socket.IO）
 ├── requirements.txt    # Python依赖
 ├── README.md          # 项目说明
 ├── templates/         # HTML模板
@@ -82,7 +86,9 @@ jianbing-game/
 ├── static/           # 静态资源
 │   ├── style.css     # 样式文件
 │   └── script.js     # JavaScript逻辑
-└── game_data.json    # 游戏数据（自动生成）
+└── game_data.json    # 游戏数据（自动生成，历史保留）
+
+> 说明：房间数据持久化在 `rooms_data.json` 中，每个房间包含 `players`、`game_data.poems`、`game_data.grid` 等。
 ```
 
 ## 🎯 使用方法
@@ -105,6 +111,10 @@ jianbing-game/
 - **清除选择**: 清除当前选中的字符
 - **重置画布**: 清空所有诗句，重新开始
 - **缩放控制**: 放大、缩小或重置画布视图
+- **玩家列表**: 左侧“房间信息”中实时显示“在线玩家：在线数/总数”，以及每位玩家的“在线/离线”状态与“诗句”数量。
+
+> 前端文件 `templates/index.html` 中玩家列表容器为：
+> `ul#playersList`，其渲染逻辑位于 `static/script.js` 的 `updatePlayersList()`。
 
 ## 🔧 配置说明
 
@@ -145,16 +155,15 @@ GRID_SIZE = 100  # 修改为所需的大小
 
 ## 📝 更新日志
 
-### v1.0.0 (2024-01-01)
-- 实现基础诗词接龙功能
-- 支持100×100网格画布
-- 实现横纵方向转换规则
-- 添加颜色选择和缩放功能
+### v1.1.0 (2025-09-07)
+- 支持导出图片
+- 新增：实时玩家列表，显示在线状态与各自诗句数量
+- 新增：REST 接口 `/api/room/<room_code>/stats` 返回房间内玩家统计
+- 新增：Socket.IO 事件 `player_stats_update`，在添加诗句、进出房间、断线时广播最新统计
+- 增强：后端维护在线用户索引 `online_users`，并在 `join_room`、`leave_room`、`disconnect` 中更新
+- UI：`static/style.css` 新增玩家卡片样式、状态徽标；`static/script.js` 新增 `playerStats`、增强 `updatePlayersList()`
 
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request来改进这个项目！
-
+> 兼容性提示：为避免单机多开同一浏览器测试导致作者归属混淆，请在不同浏览器/隐私窗口分别登录不同玩家，或改用独立设备进行联测。Flask Session 基于浏览器 Cookie，同一浏览器会共享会话。   
 ## 📄 许可证
 
 本项目采用MIT许可证，详见LICENSE文件。
@@ -163,11 +172,12 @@ GRID_SIZE = 100  # 修改为所需的大小
 
 如有问题或建议，请通过以下方式联系：
 - 提交GitHub Issue
-- 发送邮件至：[your-email@example.com]
+- 发送邮件至：d207128@qq.com
 
 ---
 
 **享受诗词接龙的乐趣，创造属于你的煎饼摊诗词网络！** 🎉
+
 
 
 
