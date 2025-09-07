@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="screen-orientation" content="landscape">
+    <meta name="x5-orientation" content="landscape">
+    <meta name="msapplication-orientation" content="landscape">
+    <meta http-equiv="ScreenOrientation" content="autoRotate:disabled">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>煎饼摊 - 诗词接龙游戏</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='1.2') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <!-- 免责声明弹窗 -->
+    <div id="disclaimerModal" class="modal disclaimer-modal">
+        <div class="modal-content disclaimer-content">
+            <div class="disclaimer-header">
+                <h2>公告&&声明</h2>
+            </div>
+            <div class="disclaimer-body">
+                <div class="disclaimer-text">
+                    <p><strong>欢迎使用煎饼摊游戏平台！</strong></p>
+                    <h4>公告</h4>
+                    <p>海内存知己，天涯若比邻。</p>
+                    <p>主包在和朋友摸鱼中知道了煎饼摊这个游戏，很快就用excel共享文档和朋友玩的不知天地为何物了。可玩着玩着发现excel逐字编辑真的好麻烦，在之后的某一天突发奇想用web端实现一下，于是就有了这个项目。</p>
+                    <p>做这个项目是为了玩摊煎饼这个游戏更方便，您玩的开心就是对主包最大的鼓励，欢迎您分享给朋友并和朋友一起来玩！</p>
+                    <p>此项目支持线上多人编辑，创建房间把你的房间号分享给朋友就可以一起游玩啦~离开房间后房间会被保留12h，可以随时回来继续游戏，不过请记好房间号。管理员有时会像一头雄狮巡视自己的领地一样检查房间，如果发现有违规内容会及时处理删除房间，请大家遵守声明中的内容。</p>
+                    <p>主包水平有限，网站有时突发恶疾请谅解，也请不要恶意攻击网站。如果遇到问题/有更好的想法/更好的建议/就是想发个邮件📫可以随时联系咕咕d207128@qq.com</p>
+                    <p>网站会不断维护更新的，祝您玩的开心。水群请加861769391.</p>
+                    <h4>在使用本平台前，请您仔细阅读并充分理解以下声明：</h4>
+                    <p>1.本平台为摸鱼&娱乐性在线游戏，仅供用户休闲娱乐使用。不涉及任何现实商业活动。</p>
+                    <p>2.用户在使用本平台时，应遵守相关法律规定，不得发布违法违规、有害、虚假，侮辱他人的言论。用户对其在平台上的所有行为承担完全责任。</p>
+                    <p>3.本平台采用临时数据存储机制，游戏数据可能因房间关闭、服务器维护而丢失。平台可能因技术升级等原因暂时无法提供服务。用户应自行备份重要信息，平台不承担数据丢失责任。</p>  
+                    <p>4.用户在使用本平台时，可能接触到其他用户发布的内容。平台不对第三方用户发布的内容承担责任，用户应自行判断内容的真实性和合法性。</p>
+                    <p><strong>重要提醒：</strong>如您不同意本免责声明的任何条款，请立即停止使用本平台。继续使用即表示您已阅读、理解并同意接受本免责声明的所有条款。</p>
+                </div>
+            </div>
+            <div class="disclaimer-footer">
+                <div class="disclaimer-buttons">
+                    <button id="acceptDisclaimer" class="btn btn-success">我已阅读并接受</button>
+                    <button id="rejectDisclaimer" class="btn btn-danger">我不接受</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户注册模态框 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>欢迎来到煎饼摊</h3>
+            </div>
+            <div class="modal-body">
+                <p>请输入您的用户名开始游戏</p>
+                <div class="input-group">
+                    <input type="text" id="usernameInput" placeholder="请输入用户名" maxlength="20">
+                    <button id="registerBtn" class="btn btn-primary">开始游戏</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 房间选择模态框 -->
+    <div id="roomModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>选择游戏模式</h3>
+            </div>
+            <div class="modal-body">
+                <div class="room-options">
+                    <button id="createRoomBtn" class="btn btn-primary room-btn">
+                        <span class="btn-icon">🏠</span>
+                        创建房间
+                    </button>
+                    <button id="joinRoomBtn" class="btn btn-secondary room-btn">
+                        <span class="btn-icon">🚪</span>
+                        加入房间
+                    </button>
+                </div>
+                
+                <!-- 加入房间输入框 -->
+                <div id="joinRoomInput" class="input-group" style="display: none;">
+                    <input type="text" id="roomCodeInput" placeholder="请输入6位房间码" maxlength="6">
+                    <button id="confirmJoinBtn" class="btn btn-primary">加入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="gameContainer" style="display: none;">
+        <!-- 左侧控制面板 -->
+        <aside class="control-panel">
+            <header class="panel-header">
+                <h1>煎饼摊</h1>
+                <div class="poem-rotator">
+                    <p id="subtitle" class="subtitle">西风驿马。落月书灯。</p>
+                </div>
+                <div class="user-info">
+                    <span id="currentUser">用户</span>
+                    <span id="roomCode" class="room-code"></span>
+                </div>
+            </header>
+
+            <!-- 房间信息 -->
+            <section class="control-section">
+                <h4>❖ 房间信息</h4>
+                <div class="info-item">
+                    <span>房间码:</span>
+                    <span id="roomCodeDisplay">-</span>
+                </div>
+                <div class="info-item">
+                    <span>在线玩家:</span>
+                    <span id="playerCount">1</span>
+                </div>
+                <div class="players-list">
+                    <h4>玩家列表</h4>
+                    <ul id="playersList"></ul>
+                </div>
+            </section>
+
+            <!-- 游戏信息
+            <section class="control-section">
+                <h4>❖ 游戏信息</h4>
+                <div class="info-item">
+                    <span>诗句数量:</span>
+                    <span id="poemCount">0</span>
+                </div>
+                <div class="info-item">
+                    <span>当前方向:</span>
+                    <span id="currentDirection">横向</span>
+                </div>
+            </section> -->
+
+            <!-- 诗句输入 -->
+            <section class="control-section">
+                <h3>❖ 诗句输入</h3>
+                <div class="input-group">
+                    <input type="text" id="poemInput" placeholder="请输入诗句" maxlength="30">
+                    <div class="char-count">
+                        <span id="currentChars">0</span>/30
+                    </div>
+                </div>
+                <button id="addPoemBtn" class="btn btn-primary">添加诗句</button>
+            </section>
+
+            <!-- 颜色选择 -->
+            <section class="control-section">
+                <h4>❖ 颜色选择</h4>
+                <div class="color-picker">
+                    <div class="color-option" style="background-color: #9370DB;" data-color="#9370DB" title="藤萝紫"></div>
+                    <div class="color-option" style="background-color: #6B8E23;" data-color="#6B8E23" title="竹青"></div>
+                    <div class="color-option" style="background-color: #87CEEB;" data-color="#87CEEB" title="天青蓝"></div>
+                    <div class="color-option" style="background-color: #CD5C5C;" data-color="#CD5C5C" title="胭脂红"></div>
+                    <input type="color" id="customColorPicker" class="color-option" title="自定义颜色">
+                </div>
+            </section>
+
+            <!-- 游戏控制 -->
+            <section class="control-section">
+                <h4>❖ 游戏控制</h4>
+                <div class="button-group">
+                    <button id="resetBtn" class="btn btn-secondary">重置游戏</button>
+                    <button id="clearSelectionBtn" class="btn btn-secondary">清除选择</button>
+                </div>
+                <div class="button-group">
+                    <button id="captureBtn" class="btn btn-primary">截取画布</button>
+                    <button id="leaveRoomBtn" class="btn btn-danger">离开房间</button>
+                </div>
+                <div class="zoom-info">
+                    <span>缩放: </span>
+                    <span id="zoomLevel">100%</span>
+                </div>
+            </section>
+
+            <!-- 游戏规则 -->
+            <section class="control-section">
+                <h4>❖ 游戏规则</h4>
+                <div class="rules">
+                    <p>1. 第一句诗放置在(45,45)位置，请往右下找</p>
+                    <p>2. 点击已有诗句中的字符进行接龙</p>
+                    <p>3. 接龙必须横纵转换方向</p>
+                    <p>4. 新诗句不能与已有诗句重叠</p>
+                    <p>5. 支持拖拽和缩放操作</p>
+                    <p>6.右键点击文字实现删除功能</p>
+                    <p>7.手机端请横屏操作</p>
+                    
+                </div>
+            </section>
+        </aside>
+
+        <!-- 右侧游戏画布 -->
+        <main class="game-canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+            <!-- 实时编辑状态显示 -->
+            <div id="editingStatus" class="editing-status"></div>
+        </main>
+    </div>
+
+    <!-- 提示信息容器 -->
+    <div id="toastContainer"></div>
+
+    <!-- 移动端横屏提示 -->
+    <div id="orientationTip" class="orientation-tip" style="display: none;">
+        <div class="orientation-content">
+            <svg class="icon" viewBox="0 0 24 24" fill="white">
+                <path d="M16.48 2.52c3.27 1.55 5.61 4.72 5.97 8.48h1.5C23.44 4.84 18.29 0 12 0l-.66.03 3.81 3.81 1.33-1.32zm-6.25-.77c-.59-.59-1.54-.59-2.12 0L1.75 8.11c-.59.59-.59 1.54 0 2.12l12.02 12.02c.59.59 1.54.59 2.12 0l6.36-6.36c.59-.59.59-1.54 0-2.12L10.23 1.75zm4.6 19.44L2.81 9.17l6.36-6.36 12.02 12.02-6.36 6.36zm-7.31.29C4.25 19.94 1.91 16.76 1.55 13H.05C.56 19.16 5.71 24 12 24l.66-.03-3.81-3.81-1.33 1.32z"/>
+            </svg>
+            <p>请将手机横屏使用</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
